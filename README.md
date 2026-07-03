@@ -1,22 +1,36 @@
 # denti-code-broker-srv
 
-Small **Flask** service that accepts **HTTP POST** publishes and forwards them to **RabbitMQ** (exchange `denti_code_events`, topic routing).
+Event broker shim for the denti-code platform. Accepts HTTP events from microservices and relays them to RabbitMQ.
 
-## Run locally
+## System Diagram
+
+```
+Microservice ──POST /api/publish──► Broker Svc ──AMQP──► RabbitMQ ──► Consumer
+                                     (port 5000)          │
+                                                      user.registered
+                                                           │
+                                                           ▼
+                                                   Patient Service
+```
+
+## How It Works
+
+1. Any service POSTs an event to `/api/publish` with a `routing_key` and `body`
+2. The broker publishes the message to a RabbitMQ topic exchange `denti_code_events`
+3. Consumers (like the Patient Service) listen on bound queues for relevant routing keys
+
+## Getting Started
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python run.py
 ```
 
-- HTTP: **http://localhost:5000**
-- Publish: **POST /api/publish** — body `{ "routing_key": "user.registered", "body": { ... } }`
-- Requires **RabbitMQ** on `localhost:5672` (e.g. Docker: `rabbitmq:3-management-alpine`).
+Server starts on `http://0.0.0.0:5000`.
 
-## Monorepo stack
+Requires RabbitMQ running on `localhost:5672`.
 
-From **`denti-code-u2`**, `./start-denti-stack.sh dev` starts RabbitMQ (Docker), then this service, then services that publish/consume (see parent README).
+## Docs
 
-Auth env: `BROKER_PUBLISH_URL=http://localhost:5000/api/publish`
+- [Architecture](./ARCHITECTURE.md)
+- [Tech Stack](./TECH_STACK.md)
